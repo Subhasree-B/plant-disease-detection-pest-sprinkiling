@@ -1,0 +1,99 @@
+pip install opencv-python numpy matplotlib
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+def analyze_leaf(image_path):
+    img = cv2.imread(image_path)
+    
+    if img is None:
+        print("Error: Image not found!")
+        return None, None, None
+    
+    img = cv2.resize(img, (300, 300))
+
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    lower_green = np.array([25, 40, 40])
+    upper_green = np.array([90, 255, 255])
+    green_mask = cv2.inRange(hsv, lower_green, upper_green)
+
+    lower_yellow = np.array([15, 40, 40])
+    upper_yellow = np.array([35, 255, 255])
+    yellow_mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
+
+    lower_brown = np.array([5, 50, 50])
+    upper_brown = np.array([20, 255, 200])
+    brown_mask = cv2.inRange(hsv, lower_brown, upper_brown)
+
+    total_pixels = img.shape[0] * img.shape[1]
+    
+    green_ratio = np.sum(green_mask > 0) / total_pixels
+    yellow_ratio = np.sum(yellow_mask > 0) / total_pixels
+    brown_ratio = np.sum(brown_mask > 0) / total_pixels
+
+    disease_ratio = yellow_ratio + brown_ratio
+
+    return img, green_ratio, disease_ratio, green_mask, yellow_mask, brown_mask
+
+
+def decision_system(disease_ratio):
+
+    if disease_ratio < 0.1:
+        return "Healthy 🌿", "No pesticide needed", 0
+    
+    elif 0.1 <= disease_ratio < 0.25:
+        return "Moderate Disease ⚠️", "Spray mild pesticide", "10 ml"
+    
+    else:
+        return "Severe Disease 🚨", "Spray strong pesticide", "25 ml"
+
+
+def run_simulation(image_path):
+    
+    result = analyze_leaf(image_path)
+    
+    if result[0] is None:
+        return
+    
+    img, green_ratio, disease_ratio, green_mask, yellow_mask, brown_mask = result
+    
+    status, action, amount = decision_system(disease_ratio)
+    
+    print("\n--- RESULT ---")
+    print("Health Status:", status)
+    print("Green Ratio:", round(green_ratio, 2))
+    print("Disease Ratio:", round(disease_ratio, 2))
+    print("Recommendation:", action)
+    
+    if amount != 0:
+        print("Pesticide Amount:", amount)
+    else:
+        print("No pesticide required 🌿")
+
+    plt.figure(figsize=(10,5))
+    
+    plt.subplot(1,4,1)
+    plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    plt.title("Original")
+    plt.axis('off')
+    plt.subplot(1,4,2)
+    plt.imshow(green_mask, cmap='gray')
+    plt.title("Green")
+    plt.axis('off')
+
+    plt.subplot(1,4,3)
+    plt.imshow(yellow_mask, cmap='gray')
+    plt.title("Yellow")
+    plt.axis('off')
+
+    plt.subplot(1,4,4)
+    plt.imshow(brown_mask, cmap='gray')
+    plt.title("Brown")
+    plt.axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+
+run_simulation("leaf.jpg")
